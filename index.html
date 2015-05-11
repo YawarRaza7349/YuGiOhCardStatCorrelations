@@ -162,10 +162,16 @@
             var xAxisRange = [];
             var yAxisMax = Math.max.apply(null, yAxisNumValues);
             var xAxisMax = Math.max.apply(null, xAxisNumValues);
-            for(var yValue = 0; yValue <= yAxisMax; ++yValue) {
+            var yAxisMin = yAxisMeasure === "l"
+                ? 1
+                : 0;
+            var xAxisMin = xAxisMeasure === "l"
+                ? 1
+                : 0;
+            for(var yValue = yAxisMin; yValue <= yAxisMax; ++yValue) {
                 yAxisRange.push(yValue.toString());
             }
-            for(var xValue = 0; xValue <= xAxisMax; ++xValue) {
+            for(var xValue = xAxisMin; xValue <= xAxisMax; ++xValue) {
                 xAxisRange.push(xValue.toString());
             }
             
@@ -229,7 +235,7 @@
                                 var nameElement = document.createElement("li");
                                 var linkElement = document.createElement("a");
                                 // doesn't always give a correct link, but most of the time it works
-                                linkElement.href = "http://yugioh.wikia.com/wiki/" + name.replace(" ", "_");
+                                linkElement.href = "http://yugioh.wikia.com/wiki/" + name.replace(" (Non-Playable)", "_(original)").replace(" ", "_");
                                 linkElement.appendChild(document.createTextNode(name));
                                 nameElement.appendChild(linkElement);
                                 nameElementList.appendChild(nameElement);
