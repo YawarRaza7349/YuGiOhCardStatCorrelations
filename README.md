@@ -7,6 +7,6 @@ If you click on a cell, you'll see the monsters corresponding to that cell. ATK 
 
 The data was scraped from [Yu-Gi-Oh! Card Guide](http://www.yugiohcardguide.com/) and transformed into a JavaScript literal list of objects. This was because there was a lot of data, and parsing it through code at run-time would be slow. This literal exists in a separate `.js` file, and is assigned to a variable, which is accessible through the main code.
 
-The repo contains all necessary source code. A JSFiddle can be found [here](https://jsfiddle.net/3ebyg7yx/embedded/result/) for convenience.
+The repo contains all necessary source code. A JSFiddle can be found [here](https://jsfiddle.net/3ezghokp/embedded/result/) for convenience.
 
 Only the source code (not the data) is available through the MIT License in the `LICENSE` file. This application is not affiliated with Yu-Gi-Oh!, the Yu-Gi-Oh! Wikia, or the Yu-Gi-Oh! Card Guide.
