@@ -1,0 +1,310 @@
+<!DOCTYPE>
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <title>Hearthstone Card Stat Correlations</title>
+        <style>
+            * {
+                font-family: Calibri, sans-serif;
+            }
+            dd {
+                font-size: 11pt;
+            }
+            dt {
+                font-size: 13pt;
+                font-weight: bold;
+            }
+            table#graph {
+                padding: 10px;
+                float: left;
+                font-family: Consolas, monospaced;
+                font-size: 10pt;
+            }
+            tr, td, th {
+                padding: 0;
+                margin: 0;
+            }
+            p#cards_info > ul {
+                height: 20em;
+                overflow-y: scroll;
+                list-style-type: none;
+                padding-left: 0;
+                padding-right: 1em;
+            }
+            section {
+                float: left;
+            }
+        </style>
+    </head>
+    <body>
+        <table id="graph">
+            <tbody>
+            </tbody>
+        </table>
+        <section>
+            <p>
+                X-Axis:
+                <select id="x-axis">
+                    <option value="attack" selected="selected">Attack</option>
+                    <option value="health">Health</option>
+                    <option value="cost">Mana Cost</option>
+                </select>
+            </p>
+            <p>
+                Y-Axis:
+                <select id="y-axis">
+                    <option value="attack">Attack</option>
+                    <option value="health" selected="selected">Health</option>
+                    <option value="cost">Mana Cost</option>
+                </select>
+            </p>
+            <p>
+                Minion Type / Race
+                <select id="race">
+                    <option value="*" selected="selected">All</option>
+                </select>
+            </p>
+            <p>
+                Player Class
+                <select id="class">
+                    <option value="*" selected="selected">All</option>
+                </select>
+            </p>
+            <p>
+                Mechanic
+                <select id="mechanics">
+                    <option value="*" selected="selected">All</option>
+                </select>
+            </p>
+            <p>
+                Color:
+                <select id="color">
+                    <option value="Grayscale" selected="selected">Grayscale</option>
+                    <option value="Red">Red</option>
+                    <option value="Yellow">Yellow</option>
+                    <option value="Green">Green</option>
+                    <option value="Cyan">Cyan</option>
+                    <option value="Blue">Blue</option>
+                    <option value="Magenta">Magenta</option>
+                </select>
+            </p>
+            <p id="cards_info">
+            </p>
+        </section>
+    </body>
+    <script src="AllSets.enUS.json.js"></script>
+    <script>
+        var filterCriteria = [
+            "race", // beast, mech, etc. ("race")
+            "playerClass", // druid, shaman, etc. ("playerClass")
+            "mechanics" // charge, battlecry, etc. ("mechanics")
+        ];
+        
+        // shorthand
+        var qs = document.querySelector.bind(document);
+        var qsa = document.querySelectorAll.bind(document);
+        
+        // for each stat, will display the value(s) represented by the cell
+        function displayedValueForMeasure(currentMeasure, value) {
+            return currentMeasure.text + ": " + (currentMeasure.value === "l"
+                ? value
+                : "" + value
+            );
+        }
+        
+        // clear graph (if it exists) and populate it from the data (based on the current filters)
+        function clearAndPopulateGraph() {
+            var filteredData = allData;
+            
+            // filter on all the selected criteria
+            filterCriteria.forEach(function(criteria) {
+                if ( qs("select#" + criteria) ) {
+                    var criteriaValue = qs("select#" + criteria).value;
+                    if(criteriaValue !== "*") {
+                        filteredData = filteredData.filter(function(card) {
+                            if ( card[criteria] != null ) {
+                                return card[criteria] === criteriaValue;
+                            } else {
+                                return false;
+                            }
+                        });
+                    }
+                }
+            });
+
+            // the stat to show on the y-axis
+            var yAxisMeasure = qs("select#y-axis").value;
+            // the stat to show on the x-axis
+            var xAxisMeasure = qs("select#x-axis").value;
+            var dataGrid = {};
+            var allYAxisValues = {}; // used as a set
+            var allXAxisValues = {}; // used as a set
+            var maxCardsInACell = 0;
+            filteredData.forEach(function(card) {
+                // retrieve stats
+                var yAxisValue = card[yAxisMeasure];
+                var xAxisValue = card[xAxisMeasure];
+                
+                // initialize cell's data if it haven't already been
+                var row = (dataGrid[yAxisValue] = dataGrid[yAxisValue] || {});
+                var cell = (row[xAxisValue] = row[xAxisValue] || []);
+                cell.push(card["name"]); // name of card
+                maxCardsInACell = Math.max(maxCardsInACell, cell.length);
+                
+                // keep track of all possible values
+                allYAxisValues[yAxisValue] = true;
+                allXAxisValues[xAxisValue] = true;
+            });
+            
+            var boundParseInt = function(str) {
+                return parseInt(str);
+            };
+            var yAxisNumValues = Object.keys(allYAxisValues).map(boundParseInt);
+            var xAxisNumValues = Object.keys(allXAxisValues).map(boundParseInt);
+            
+            // the full range of values (to keep graph small when possible, but never skipping values in between)
+            var yAxisRange = [];
+            var xAxisRange = [];
+            var yAxisMax = Math.max.apply(null, yAxisNumValues);
+            var xAxisMax = Math.max.apply(null, xAxisNumValues);
+            var yAxisMin = yAxisMeasure === "l"
+                ? 1
+                : 0;
+            var xAxisMin = xAxisMeasure === "l"
+                ? 1
+                : 0;
+            for(var yValue = yAxisMin; yValue <= yAxisMax; ++yValue) {
+                yAxisRange.push(yValue.toString());
+            }
+            for(var xValue = xAxisMin; xValue <= xAxisMax; ++xValue) {
+                xAxisRange.push(xValue.toString());
+            }
+            
+            // we want graph origin to be bottom-left, but HTML is generated from top-left
+            yAxisRange.reverse();
+            
+            var tableElement = qs("table#graph > tbody");
+            while(tableElement.firstChild) { // http://stackoverflow.com/a/3955238
+                tableElement.removeChild(tableElement.firstChild);
+            }
+            // take log to reduce visual discrepancy among cells
+            var maxDarkness = Math.log(1 + maxCardsInACell);
+            
+            yAxisRange.forEach(function(yStr) {
+                var yNum = parseInt(yStr);
+                var rowElement = document.createElement("tr");
+                var yAxisLabel = document.createElement("th");
+                // fill in zeros for visual consistency
+                yAxisLabel.appendChild(document.createTextNode((yNum + 100).toString().slice(-2)));
+                rowElement.appendChild(yAxisLabel);
+                
+                xAxisRange.forEach(function(xStr) {
+                    var xNum = parseInt(xStr);
+                    var cellElement = document.createElement("td");
+                    var colorIndex = qs("select#color").selectedIndex;
+                    var hue = colorIndex === 0
+                        ? 0 // grayscale
+                        : (colorIndex - 1) * 60; // the colors are evenly spaced and listed in order
+                    var saturation = colorIndex === 0
+                        ? "0%" // grayscale
+                        : "100%";
+                    var numCardsInCell = dataGrid[yStr] !== undefined && dataGrid[yStr][xStr] !== undefined
+                        ? dataGrid[yStr][xStr].length
+                        : 0;
+                    // darkness relative to the maximum darkness
+                    var relativeDarkness = Math.log(1 + numCardsInCell) / maxDarkness;
+                    var lightness = (100 - Math.floor(relativeDarkness * 100)) + "%";
+                    cellElement.setAttribute("style", "background-color:hsl(" + hue + ", " + saturation + ", " + lightness + ")");
+                    
+                    // can click any cell of the grid to get more info about cards with that value
+                    cellElement.addEventListener("click", function() {
+                        var infoElement = qs("p#cards_info");
+                        // clear information from previous click
+                        while(infoElement.firstChild) { // http://stackoverflow.com/a/3955238
+                            infoElement.removeChild(infoElement.firstChild);
+                        }
+                        var xAxisMeasuresDropdown = qs("select#x-axis");
+                        var xAxisCurrentMeasure = xAxisMeasuresDropdown.options[xAxisMeasuresDropdown.selectedIndex];
+                        var yAxisMeasuresDropdown = qs("select#y-axis");
+                        var yAxisCurrentMeasure = yAxisMeasuresDropdown.options[yAxisMeasuresDropdown.selectedIndex];
+                        
+                        // list information about the cell that was clicked
+                        infoElement.appendChild(document.createTextNode(displayedValueForMeasure(xAxisCurrentMeasure, xNum)));
+                        infoElement.appendChild(document.createElement("br"));
+                        infoElement.appendChild(document.createTextNode(displayedValueForMeasure(yAxisCurrentMeasure, yNum)));
+                        
+                        // list cards that belong to that cell
+                        var nameElementList = document.createElement("ul");
+                        if(dataGrid[yStr] !== undefined && dataGrid[yStr][xStr] !== undefined) {
+                            dataGrid[yStr][xStr].forEach(function(name) {
+                                var nameElement = document.createElement("li");
+                                var linkElement = document.createElement("a");
+                                linkElement.appendChild(document.createTextNode(name));
+                                nameElement.appendChild(linkElement);
+                                nameElementList.appendChild(nameElement);
+                            });
+                        }
+                        infoElement.appendChild(nameElementList);
+                    });
+                    rowElement.appendChild(cellElement);
+                });
+                tableElement.appendChild(rowElement);
+            });
+            
+            var xAxisLabels = document.createElement("tr");
+            xAxisLabels.appendChild(document.createElement("th")); // empty corner label
+            xAxisRange.forEach(function(xStr) {
+                var xNum = parseInt(xStr);
+                var xAxisLabel = document.createElement("th");
+                // fill in zeros for visual consistency
+                xAxisLabel.appendChild(document.createTextNode((xNum + 100).toString().slice(-2)));
+                xAxisLabels.appendChild(xAxisLabel);
+            });
+            tableElement.appendChild(xAxisLabels);
+            
+            var infoElement = qs("p#cards_info");
+            while(infoElement.firstChild) { // http://stackoverflow.com/a/3955238
+                infoElement.removeChild(infoElement.firstChild);
+            }
+        }
+        
+        window.addEventListener("load", function() {
+            filterCriteria.forEach(function(criteria) {
+                // find all possible values for attribute, type, and category
+                var possibleCriteriaValues = {}; // used as a set
+                allData.forEach(function(card) {
+                    if ( card != null && card[criteria] != null ) {
+                        if ( typeof card[criteria] == "string" ) {
+                            possibleCriteriaValues[card[criteria]] = true;
+                        } else {
+                            card[criteria].forEach(function(criteriaValue) {
+                                possibleCriteriaValues[criteriaValue] = true;
+                            });
+                        }
+                    } else {
+                        possibleCriteriaValues["None"] = true;
+                    }
+                });
+                
+                // populate dropdowns with values
+                var criteriaDropdown = qs("select#" + criteria);
+                if ( criteriaDropdown != null ) {
+                    Object.keys(possibleCriteriaValues).sort().forEach(function(criteriaValue) {
+                        var criteriaValueElement = document.createElement("option");
+                        criteriaValueElement.value = criteriaValue;
+                        criteriaValueElement.appendChild(document.createTextNode(criteriaValue));
+                        criteriaDropdown.appendChild(criteriaValueElement);
+                    });
+                }
+            });
+            
+            // recreate graph when the filters change
+            Array.prototype.forEach.call(qsa("select"), function(criteria) {
+                criteria.addEventListener("change", clearAndPopulateGraph);
+            });
+            
+            // initially create the graph (on the unfiltered data)
+            clearAndPopulateGraph();
+        });
+    </script>
+</html>
