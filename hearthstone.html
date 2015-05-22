@@ -99,6 +99,18 @@
             "playerClass", // druid, shaman, etc. ("playerClass")
             "mechanics" // charge, battlecry, etc. ("mechanics")
         ];
+
+        var actualAllData = [];
+        for(var set in allData){
+            for(var card in allData[set]){
+                var theCard = allData[set][card];
+                if ( theCard["type"] === "Minion" ) {
+                    if ( theCard["cost"] != null && theCard["attack"] != null && theCard["health"] != null ) {
+                        actualAllData.push(allData[set][card]);
+                    }
+                }
+            }
+        }
         
         // shorthand
         var qs = document.querySelector.bind(document);
@@ -115,6 +127,7 @@
         // clear graph (if it exists) and populate it from the data (based on the current filters)
         function clearAndPopulateGraph() {
             var filteredData = actualAllData;
+
             
             // filter on all the selected criteria
             filterCriteria.forEach(function(criteria) {
