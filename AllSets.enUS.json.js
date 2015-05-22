@@ -3,8 +3,11 @@ var allData = {"Basic":[{"id":"GAME_004","name":"AFK","type":"Enchantment","text
 var actualAllData = [];
 for(var set in allData){
 	for(var card in allData[set]){
-		if ( allData[set][card]["type"] === "Minion" && allData[set][card]["name"] !== "Placeholder Card") {
-			actualAllData.push(allData[set][card]);
+		var theCard = allData[set][card];
+		if ( theCard["type"] === "Minion" ) {
+			if ( theCard["cost"] != null && theCard["attack"] != null && theCard["health"] != null ) {
+				actualAllData.push(allData[set][card]);
+			}
 		}
 	}
 }
