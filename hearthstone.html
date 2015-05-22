@@ -66,7 +66,7 @@
             </p>
             <p>
                 Player Class
-                <select id="class">
+                <select id="playerClass">
                     <option value="*" selected="selected">All</option>
                 </select>
             </p>
@@ -114,21 +114,27 @@
         
         // clear graph (if it exists) and populate it from the data (based on the current filters)
         function clearAndPopulateGraph() {
-            var filteredData = allData;
+            var filteredData = actualAllData;
             
             // filter on all the selected criteria
             filterCriteria.forEach(function(criteria) {
-                if ( qs("select#" + criteria) ) {
-                    var criteriaValue = qs("select#" + criteria).value;
-                    if(criteriaValue !== "*") {
-                        filteredData = filteredData.filter(function(card) {
-                            if ( card[criteria] != null ) {
-                                return card[criteria] === criteriaValue;
-                            } else {
-                                return false;
+                var criteriaValue = qs("select#" + criteria).value;
+                if(criteriaValue !== "*" ) {
+                    filteredData = filteredData.filter(function(card) {
+                        if ( criteriaValue === "None" ) {
+                            return card[criteria] == null;
+                        } else if ( criteria === "mechanics" ) {
+                            for ( var m in card["mechanics"] ) {
+                                if ( card["mechanics"][m] === criteriaValue ) {
+                                    return true;
+                                }
                             }
-                        });
-                    }
+                            return false;
+                        } else {
+                            return card[criteria] === criteriaValue;
+                        }
+                    });
+                } else {
                 }
             });
 
@@ -272,8 +278,8 @@
             filterCriteria.forEach(function(criteria) {
                 // find all possible values for attribute, type, and category
                 var possibleCriteriaValues = {}; // used as a set
-                allData.forEach(function(card) {
-                    if ( card != null && card[criteria] != null ) {
+                actualAllData.forEach(function(card) {
+                    if ( card[criteria] != null ) {
                         if ( typeof card[criteria] == "string" ) {
                             possibleCriteriaValues[card[criteria]] = true;
                         } else {
